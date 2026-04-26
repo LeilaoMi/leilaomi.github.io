@@ -1,2 +1,41 @@
-<h1>我的网站上线了</h1>
-<p>来自 leilaomi.sld.tw</p>
+import { useMemo, useState } from "react"; import { Card, CardContent } from "@/components/ui/card"; import { Input } from "@/components/ui/input"; import { Button } from "@/components/ui/button"; import { Moon, Sun } from "lucide-react";
+
+const DATA = [ { category: "常用工具", items: [ { name: "Google", url: "https://www.google.com" }, { name: "GitHub", url: "https://github.com" }, { name: "YouTube", url: "https://youtube.com" } ] }, { category: "学习资源", items: [ { name: "MDN", url: "https://developer.mozilla.org" }, { name: "StackOverflow", url: "https://stackoverflow.com" } ] } ];
+
+export default function NavSite() { const [query, setQuery] = useState(""); const [dark, setDark] = useState(false);
+
+const filtered = useMemo(() => { if (!query) return DATA; return DATA.map(cat => ({ ...cat, items: cat.items.filter(i => i.name.toLowerCase().includes(query.toLowerCase()) ) })).filter(cat => cat.items.length > 0); }, [query]);
+
+return ( <div className={dark ? "dark bg-black text-white min-h-screen p-6" : "bg-gray-100 min-h-screen p-6"}> <div className="flex justify-between items-center mb-6"> <h1 className="text-2xl font-bold">我的高级导航站</h1> <Button onClick={() => setDark(!dark)}> {dark ? <Sun /> : <Moon />} </Button> </div>
+
+<Input
+    placeholder="搜索网站..."
+    value={query}
+    onChange={(e) => setQuery(e.target.value)}
+    className="mb-6"
+  />
+
+  <div className="grid gap-6 md:grid-cols-2">
+    {filtered.map((cat, idx) => (
+      <Card key={idx}>
+        <CardContent>
+          <h2 className="text-xl font-semibold mb-3">{cat.category}</h2>
+          <div className="space-y-2">
+            {cat.items.map((item, i) => (
+              <a
+                key={i}
+                href={item.url}
+                target="_blank"
+                className="block p-2 rounded bg-white hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+              >
+                {item.name}
+              </a>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+</div>
+
+); }
