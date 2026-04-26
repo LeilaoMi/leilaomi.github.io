@@ -1,134 +1,73 @@
-<!DOCTYPE html><html lang="zh">
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>高级导航站</title>
-<style>
-:root{
-  --bg:#f5f5f5;
-  --card:#ffffff;
-  --text:#111;
-  --muted:#666;
-}
-body.dark{
-  --bg:#0f0f0f;
-  --card:#1e1e1e;
-  --text:#fff;
-  --muted:#aaa;
-}
-body{
-  margin:0;
-  font-family:Arial;
-  background:var(--bg);
-  color:var(--text);
-  transition:.3s;
-}
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:20px;
-}
-h1{font-size:20px;}
-button{
-  padding:8px 12px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-}
-.container{padding:20px;}
-input{
-  width:100%;
-  padding:10px;
-  border-radius:10px;
-  border:1px solid #ddd;
-  margin-bottom:20px;
-}
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-  gap:15px;
-}
-.card{
-  background:var(--card);
-  padding:15px;
-  border-radius:12px;
-  box-shadow:0 2px 10px rgba(0,0,0,.1);
-}
-.card h3{margin-top:0;}
-a{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  text-decoration:none;
-  color:var(--text);
-  padding:6px;
-  border-radius:8px;
-}
-a:hover{background:rgba(0,0,0,.05);}
-.icon{width:18px;height:18px;}/* 管理面板 */ .admin{ margin-top:30px; padding:15px; background:var(--card); border-radius:12px; } .admin input{ margin:5px 0; } .small{font-size:12px;color:var(--muted);} </style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的私人导航站</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f1f5f9; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        .link-item { transition: all 0.2s; border-radius: 8px; }
+        .link-item:active { background-color: #e2e8f0; transform: scale(0.98); }
+    </style>
 </head>
-<body><header>
-  <h1>🚀 高级导航站</h1>
-  <button onclick="toggleDark()">🌙/☀️</button>
-</header><div class="container"><input id="search" placeholder="搜索网站..." oninput="render()" /><div class="grid" id="grid"></div><!-- 可编辑后台 --><div class="admin">
-  <h3>⚙️ 快速添加网站（本地存储）</h3>
-  <input id="name" placeholder="网站名称" />
-  <input id="url" placeholder="网址 https://" />
-  <button onclick="addSite()">添加</button>
-  <p class="small">数据保存在浏览器localStorage（无服务器后台）</p>
-</div></div><script>
-let data = JSON.parse(localStorage.getItem("navdata")) || [
-  {category:"常用工具",items:[
-    {name:"Google",url:"https://google.com"},
-    {name:"GitHub",url:"https://github.com"},
-    {name:"YouTube",url:"https://youtube.com"}
-  ]}
-];
+<body class="p-4">
+    <div class="max-w-7xl mx-auto">
+        <header class="py-8 text-center">
+            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">个人资源导航</h1>
+            <p class="text-slate-500 text-sm mt-1">手机端适配版 · 全量书签</p>
+        </header>
 
-function render(){
-  const q = document.getElementById("search").value.toLowerCase();
-  const grid = document.getElementById("grid");
-  grid.innerHTML="";
+        <div class="card-grid">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-blue-50 px-4 py-3 border-b border-blue-100 font-bold text-blue-700 flex items-center">
+                    <i class="fa-solid fa-cloud mr-2"></i>Cloudflare 工具
+                </div>
+                <div class="p-2">
+                    <a href="https://zdy.ipx2001.cloudns.biz/" class="link-item block p-3 text-slate-700 hover:bg-slate-50">CSV → VLESS 工作台</a>
+                    <a href="https://saas.seeck.cn/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">Senflare SaaS 优选</a>
+                    <a href="https://ip.cloudip.ggff.net/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">VLESS 节点生成</a>
+                </div>
+            </div>
 
-  data.forEach(cat=>{
-    let items = cat.items.filter(i=>i.name.toLowerCase().includes(q));
-    if(items.length===0) return;
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-green-50 px-4 py-3 border-b border-green-100 font-bold text-green-700 flex items-center">
+                    <i class="fa-solid fa-server mr-2"></i>服务器 & 域名
+                </div>
+                <div class="p-2">
+                    <a href="https://my.racknerd.com/clientarea.php" class="link-item block p-3 text-slate-700 hover:bg-slate-50">RackNerd 客户中心</a>
+                    <a href="https://my.dnshe.com/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">DNSHE 域名管理</a>
+                    <a href="https://dash.cloudflare.com/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">Cloudflare 控制台</a>
+                </div>
+            </div>
 
-    let card = document.createElement("div");
-    card.className="card";
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-purple-50 px-4 py-3 border-b border-purple-100 font-bold text-purple-700 flex items-center">
+                    <i class="fa-solid fa-book-open mr-2"></i>学习与面试
+                </div>
+                <div class="p-2">
+                    <a href="https://www.nowcoder.com/exam/company" class="link-item block p-3 text-slate-700 hover:bg-slate-50">牛客大厂真题</a>
+                    <a href="https://github.com/EbookFoundation/free-programming-books" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">免费编程书籍资源</a>
+                    <a href="https://shimo.im/docs/..." class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">石墨文档资源</a>
+                </div>
+            </div>
 
-    let html = `<h3>${cat.category}</h3>`;
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-orange-50 px-4 py-3 border-b border-orange-100 font-bold text-orange-700 flex items-center">
+                    <i class="fa-solid fa-wrench mr-2"></i>工具汇总
+                </div>
+                <div class="p-2">
+                    <a href="https://www.cnblogs.com/mq0036/p/14112111.html" class="link-item block p-3 text-slate-700 hover:bg-slate-50 text-sm">常用工具类库汇总</a>
+                    <a href="https://www.fofas.cn/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50 text-sm">Fofas 搜索</a>
+                </div>
+            </div>
+        </div>
 
-    items.forEach(i=>{
-      html += `<a href='${i.url}' target='_blank'>🌐 ${i.name}</a>`;
-    });
-
-    card.innerHTML = html;
-    grid.appendChild(card);
-  });
-}
-
-function addSite(){
-  let name = document.getElementById("name").value;
-  let url = document.getElementById("url").value;
-
-  if(!name || !url) return;
-
-  data[0].items.push({name,url});
-  localStorage.setItem("navdata",JSON.stringify(data));
-
-  document.getElementById("name").value="";
-  document.getElementById("url").value="";
-
-  render();
-}
-
-function toggleDark(){
-  document.body.classList.toggle("dark");
-}
-
-render();
-</script></body>
+        <footer class="py-12 text-center text-slate-400 text-xs">
+            <p>已同步你的全部核心书签分类</p>
+        </footer>
+    </div>
+</body>
 </html>
