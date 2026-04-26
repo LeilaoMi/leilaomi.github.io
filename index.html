@@ -1,41 +1,134 @@
-import { useMemo, useState } from "react"; import { Card, CardContent } from "@/components/ui/card"; import { Input } from "@/components/ui/input"; import { Button } from "@/components/ui/button"; import { Moon, Sun } from "lucide-react";
+<!DOCTYPE html><html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>高级导航站</title>
+<style>
+:root{
+  --bg:#f5f5f5;
+  --card:#ffffff;
+  --text:#111;
+  --muted:#666;
+}
+body.dark{
+  --bg:#0f0f0f;
+  --card:#1e1e1e;
+  --text:#fff;
+  --muted:#aaa;
+}
+body{
+  margin:0;
+  font-family:Arial;
+  background:var(--bg);
+  color:var(--text);
+  transition:.3s;
+}
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:20px;
+}
+h1{font-size:20px;}
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+.container{padding:20px;}
+input{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  margin-bottom:20px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+  gap:15px;
+}
+.card{
+  background:var(--card);
+  padding:15px;
+  border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.1);
+}
+.card h3{margin-top:0;}
+a{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  text-decoration:none;
+  color:var(--text);
+  padding:6px;
+  border-radius:8px;
+}
+a:hover{background:rgba(0,0,0,.05);}
+.icon{width:18px;height:18px;}/* 管理面板 */ .admin{ margin-top:30px; padding:15px; background:var(--card); border-radius:12px; } .admin input{ margin:5px 0; } .small{font-size:12px;color:var(--muted);} </style>
 
-const DATA = [ { category: "常用工具", items: [ { name: "Google", url: "https://www.google.com" }, { name: "GitHub", url: "https://github.com" }, { name: "YouTube", url: "https://youtube.com" } ] }, { category: "学习资源", items: [ { name: "MDN", url: "https://developer.mozilla.org" }, { name: "StackOverflow", url: "https://stackoverflow.com" } ] } ];
+</head>
+<body><header>
+  <h1>🚀 高级导航站</h1>
+  <button onclick="toggleDark()">🌙/☀️</button>
+</header><div class="container"><input id="search" placeholder="搜索网站..." oninput="render()" /><div class="grid" id="grid"></div><!-- 可编辑后台 --><div class="admin">
+  <h3>⚙️ 快速添加网站（本地存储）</h3>
+  <input id="name" placeholder="网站名称" />
+  <input id="url" placeholder="网址 https://" />
+  <button onclick="addSite()">添加</button>
+  <p class="small">数据保存在浏览器localStorage（无服务器后台）</p>
+</div></div><script>
+let data = JSON.parse(localStorage.getItem("navdata")) || [
+  {category:"常用工具",items:[
+    {name:"Google",url:"https://google.com"},
+    {name:"GitHub",url:"https://github.com"},
+    {name:"YouTube",url:"https://youtube.com"}
+  ]}
+];
 
-export default function NavSite() { const [query, setQuery] = useState(""); const [dark, setDark] = useState(false);
+function render(){
+  const q = document.getElementById("search").value.toLowerCase();
+  const grid = document.getElementById("grid");
+  grid.innerHTML="";
 
-const filtered = useMemo(() => { if (!query) return DATA; return DATA.map(cat => ({ ...cat, items: cat.items.filter(i => i.name.toLowerCase().includes(query.toLowerCase()) ) })).filter(cat => cat.items.length > 0); }, [query]);
+  data.forEach(cat=>{
+    let items = cat.items.filter(i=>i.name.toLowerCase().includes(q));
+    if(items.length===0) return;
 
-return ( <div className={dark ? "dark bg-black text-white min-h-screen p-6" : "bg-gray-100 min-h-screen p-6"}> <div className="flex justify-between items-center mb-6"> <h1 className="text-2xl font-bold">我的高级导航站</h1> <Button onClick={() => setDark(!dark)}> {dark ? <Sun /> : <Moon />} </Button> </div>
+    let card = document.createElement("div");
+    card.className="card";
 
-<Input
-    placeholder="搜索网站..."
-    value={query}
-    onChange={(e) => setQuery(e.target.value)}
-    className="mb-6"
-  />
+    let html = `<h3>${cat.category}</h3>`;
 
-  <div className="grid gap-6 md:grid-cols-2">
-    {filtered.map((cat, idx) => (
-      <Card key={idx}>
-        <CardContent>
-          <h2 className="text-xl font-semibold mb-3">{cat.category}</h2>
-          <div className="space-y-2">
-            {cat.items.map((item, i) => (
-              <a
-                key={i}
-                href={item.url}
-                target="_blank"
-                className="block p-2 rounded bg-white hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-              >
-                {item.name}
-              </a>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-</div>
+    items.forEach(i=>{
+      html += `<a href='${i.url}' target='_blank'>🌐 ${i.name}</a>`;
+    });
 
-); }
+    card.innerHTML = html;
+    grid.appendChild(card);
+  });
+}
+
+function addSite(){
+  let name = document.getElementById("name").value;
+  let url = document.getElementById("url").value;
+
+  if(!name || !url) return;
+
+  data[0].items.push({name,url});
+  localStorage.setItem("navdata",JSON.stringify(data));
+
+  document.getElementById("name").value="";
+  document.getElementById("url").value="";
+
+  render();
+}
+
+function toggleDark(){
+  document.body.classList.toggle("dark");
+}
+
+render();
+</script></body>
+</html>
