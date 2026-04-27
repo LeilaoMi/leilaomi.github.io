@@ -2,7 +2,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>导航站 Pro Max</title><style>
+<title>导航站 Pro Max（懒加载）</title><style>
 :root{ --bg:#f7f7f5; --card:#fff; --text:#1f1f1f; }
 body.dark{ --bg:#1e1e1e; --card:#2f2f2f; --text:#fff; }
 body{ margin:0; font-family:-apple-system; background:var(--bg); color:var(--text); }
@@ -21,92 +21,59 @@ input{ width:100%; padding:12px; border-radius:12px; border:none; }
 
 .upload-btn{ position:fixed; right:15px; bottom:80px; width:52px; height:52px; border-radius:50%; background:#4CAF50; color:#fff; border:none; }
 
-/* context menu */
-.menu{
-  position:fixed;
-  background:#333;
-  color:#fff;
-  padding:10px;
-  border-radius:10px;
-  display:none;
-  z-index:999;
-}
-.menu div{ padding:6px 10px; cursor:pointer; }
-.menu div:hover{ background:#555; }
+.loader{ text-align:center; padding:20px; font-size:12px; opacity:.6; }
 </style></head>
 <body><div class="topbar">
-  <input id="search" placeholder="🔍 搜索" oninput="render()">
-</div><div id="content"></div><input type="file" id="fileInput" style="display:none" accept=".html" />
+  <input id="search" placeholder="🔍 搜索" oninput="resetAndRender()">
+</div><div id="content"></div>
+<div id="loader" class="loader">加载中...</div><input type="file" id="fileInput" style="display:none" accept=".html" />
 <button class="upload-btn" onclick="triggerFile()">📂</button><div class="dock">
   <button onclick="scrollTopFast()">⬆️</button>
   <button onclick="toggleDark()">🌙</button>
   <button onclick="updateFromLast()">🔄</button>
-</div><div id="menu" class="menu"></div><script>
+</div><script>
 let data = JSON.parse(localStorage.getItem("nav")) || [];
 let lastRaw = localStorage.getItem("nav_raw") || "";
-let pinned = JSON.parse(localStorage.getItem("nav_pin")||"[]");
 let recent = JSON.parse(localStorage.getItem("nav_recent")||"[]");
 let freq = JSON.parse(localStorage.getItem("nav_freq")||"{}");
+
+const BATCH = 120; // 每次加载数量
+let renderIndex = 0;
+let flatList = [];
 
 function triggerFile(){ fileInput.click(); }
 fileInput.onchange=e=>{ if(e.target.files[0]) readFile(e.target.files[0]); };
 
 function readFile(file){
   let r=new FileReader();
-  r.onload=()=>{ lastRaw=r.result; localStorage.setItem('nav_raw',lastRaw); data=parse(lastRaw); save(); render(); };
+  r.onload=()=>{ lastRaw=r.result; localStorage.setItem('nav_raw',lastRaw); data=parse(lastRaw); save(); resetAndRender(); };
   r.readAsText(file);
 }
 
-function updateFromLast(){ if(!lastRaw)return alert('先导入'); data=parse(lastRaw); save(); render(); }
+function updateFromLast(){ if(!lastRaw)return alert('先导入'); data=parse(lastRaw); save(); resetAndRender(); }
 
 function parse(html){
-  const doc = new DOMParser().parseFromString(html,'text/html');
+  const doc=new DOMParser().parseFromString(html,'text/html');
   let result = [];
 
-  // 优先按文件夹解析（常见浏览器）
   doc.querySelectorAll('DT').forEach(dt => {
     const h3 = dt.querySelector('h3');
     const dl = dt.querySelector('dl');
-
     if(h3 && dl){
-      let name = h3.innerText || '未命名';
-      let links = [];
-
-      dl.querySelectorAll('a').forEach(a => {
-        if(a.href){
-          links.push({ name: a.innerText || a.href, url: a.href });
-        }
+      let links=[];
+      dl.querySelectorAll('a').forEach(a=>{
+        if(a.href) links.push({name:a.innerText||a.href,url:a.href});
       });
-
-      if(links.length){
-        result.push({ category: name, items: links });
-      }
+      if(links.length) result.push({category:h3.innerText,items:links});
     }
   });
 
-  // fallback：如果没有解析出分类 → 全部读取
-  if(result.length === 0){
-    let allLinks = Array.from(doc.querySelectorAll('a'));
-
-    if(allLinks.length === 0){
-      alert('没有检测到书签，请确认文件是否正确');
-      return [];
-    }
-
-    result.push({
-      category: '📚 我的书签',
-      items: allLinks.map(a => ({
-        name: a.innerText || a.href,
-        url: a.href
-      }))
-    });
+  if(result.length===0){
+    let allLinks=[...doc.querySelectorAll('a')];
+    result.push({category:'📚 我的书签',items:allLinks.map(a=>({name:a.innerText||a.href,url:a.href}))});
   }
 
   return result;
-}
-    if(links.length) res.push({category:f.innerText,items:links});
-  });
-  return res;
 }
 
 function icon(url){ try{return 'https://www.google.com/s2/favicons?domain='+new URL(url).hostname;}catch{return '';} }
@@ -119,59 +86,55 @@ function openLink(url){
   window.open(url,'_blank');
 }
 
-// 长按菜单
-let pressTimer;
-function showMenu(x,y,url){
-  let m=document.getElementById('menu');
-  m.style.display='block';
-  m.style.left=x+'px';
-  m.style.top=y+'px';
-  m.innerHTML=`
-    <div onclick="togglePin('${url}')">⭐ 置顶</div>
-    <div onclick="removeSite('${url}')">🗑 删除</div>
-  `;
-}
-
-document.body.onclick=()=>{ document.getElementById('menu').style.display='none'; };
-
-function togglePin(url){
-  if(pinned.includes(url)) pinned=pinned.filter(u=>u!==url);
-  else pinned.push(url);
-  localStorage.setItem('nav_pin',JSON.stringify(pinned));
-  render();
-}
-
-function removeSite(url){
-  data.forEach(cat=> cat.items=cat.items.filter(i=>i.url!==url));
-  save(); render();
-}
-
-function render(){
-  let q=search.value.toLowerCase();
-  let c=content; c.innerHTML='';
-
-  // 按频率排序
-  let sortFn=(a,b)=>(freq[b.url]||0)-(freq[a.url]||0);
-
+function buildFlatList(){
+  let q=(search.value||'').toLowerCase();
+  flatList=[];
   data.forEach(cat=>{
-    let items=cat.items.filter(i=>i.name.toLowerCase().includes(q)).sort(sortFn);
-    if(!items.length) return;
-
-    c.innerHTML+=`<div class='section-title'>${cat.category}</div><div class='grid'>`+
-    items.map(i=>`<div class="card"
-      ontouchstart="pressTimer=setTimeout(()=>showMenu(event.touches[0].clientX,event.touches[0].clientY,'${i.url}'),500)"
-      ontouchend="clearTimeout(pressTimer)"
-      onclick="openLink('${i.url}')">
-      <img src="${icon(i.url)}"><span>${i.name}</span>
-    </div>`).join('')+
-    `</div>`;
+    cat.items.forEach(i=>{
+      if(i.name.toLowerCase().includes(q)){
+        flatList.push(i);
+      }
+    });
   });
+  flatList.sort((a,b)=>(freq[b.url]||0)-(freq[a.url]||0));
 }
+
+function renderBatch(){
+  let c=content;
+  let slice=flatList.slice(renderIndex, renderIndex+BATCH);
+
+  let html = `<div class='grid'>` + slice.map(i=>
+    `<div class="card" onclick="openLink('${i.url}')">
+      <img src="${icon(i.url)}"><span>${i.name}</span>
+    </div>`
+  ).join('') + `</div>`;
+
+  c.insertAdjacentHTML('beforeend', html);
+  renderIndex += BATCH;
+
+  if(renderIndex >= flatList.length){
+    loader.innerText = '已加载全部';
+  }
+}
+
+function resetAndRender(){
+  content.innerHTML='';
+  renderIndex=0;
+  buildFlatList();
+  renderBatch();
+}
+
+// 滚动触发加载
+window.addEventListener('scroll', ()=>{
+  if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 200){
+    renderBatch();
+  }
+});
 
 function scrollTopFast(){ window.scrollTo({top:0,behavior:'smooth'}); }
 function toggleDark(){ document.body.classList.toggle('dark'); }
 function save(){ localStorage.setItem('nav',JSON.stringify(data)); }
 
-render();
+resetAndRender();
 </script></body>
 </html>
