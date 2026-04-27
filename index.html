@@ -1,73 +1,141 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<!DOCTYPE html><html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的私人导航站</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background-color: #f1f5f9; }
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
-        .link-item { transition: all 0.2s; border-radius: 8px; }
-        .link-item:active { background-color: #e2e8f0; transform: scale(0.98); }
-    </style>
-</head>
-<body class="p-4">
-    <div class="max-w-7xl mx-auto">
-        <header class="py-8 text-center">
-            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">个人资源导航</h1>
-            <p class="text-slate-500 text-sm mt-1">手机端适配版 · 全量书签</p>
-        </header>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>导航站 Pro Max</title><style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --text:#1f1f1f; --accent:#e9e9e7;
+}
+body.dark{ --bg:#1e1e1e; --card:#2f2f2f; --text:#fff; --accent:#3a3a3a; }
 
-        <div class="card-grid">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="bg-blue-50 px-4 py-3 border-b border-blue-100 font-bold text-blue-700 flex items-center">
-                    <i class="fa-solid fa-cloud mr-2"></i>Cloudflare 工具
-                </div>
-                <div class="p-2">
-                    <a href="https://zdy.ipx2001.cloudns.biz/" class="link-item block p-3 text-slate-700 hover:bg-slate-50">CSV → VLESS 工作台</a>
-                    <a href="https://saas.seeck.cn/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">Senflare SaaS 优选</a>
-                    <a href="https://ip.cloudip.ggff.net/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">VLESS 节点生成</a>
-                </div>
-            </div>
+*{ -webkit-tap-highlight-color: transparent; }
+body{ margin:0; font-family:-apple-system; background:var(--bg); color:var(--text); }
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="bg-green-50 px-4 py-3 border-b border-green-100 font-bold text-green-700 flex items-center">
-                    <i class="fa-solid fa-server mr-2"></i>服务器 & 域名
-                </div>
-                <div class="p-2">
-                    <a href="https://my.racknerd.com/clientarea.php" class="link-item block p-3 text-slate-700 hover:bg-slate-50">RackNerd 客户中心</a>
-                    <a href="https://my.dnshe.com/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">DNSHE 域名管理</a>
-                    <a href="https://dash.cloudflare.com/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">Cloudflare 控制台</a>
-                </div>
-            </div>
+/* iPhone style grid */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  padding:15px;
+}
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="bg-purple-50 px-4 py-3 border-b border-purple-100 font-bold text-purple-700 flex items-center">
-                    <i class="fa-solid fa-book-open mr-2"></i>学习与面试
-                </div>
-                <div class="p-2">
-                    <a href="https://www.nowcoder.com/exam/company" class="link-item block p-3 text-slate-700 hover:bg-slate-50">牛客大厂真题</a>
-                    <a href="https://github.com/EbookFoundation/free-programming-books" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">免费编程书籍资源</a>
-                    <a href="https://shimo.im/docs/..." class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50">石墨文档资源</a>
-                </div>
-            </div>
+.card{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:10px 6px;
+  border-radius:16px;
+  background:var(--card);
+  cursor:pointer;
+  transition:.15s;
+}
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="bg-orange-50 px-4 py-3 border-b border-orange-100 font-bold text-orange-700 flex items-center">
-                    <i class="fa-solid fa-wrench mr-2"></i>工具汇总
-                </div>
-                <div class="p-2">
-                    <a href="https://www.cnblogs.com/mq0036/p/14112111.html" class="link-item block p-3 text-slate-700 hover:bg-slate-50 text-sm">常用工具类库汇总</a>
-                    <a href="https://www.fofas.cn/" class="link-item block p-3 text-slate-700 hover:bg-slate-50 border-t border-slate-50 text-sm">Fofas 搜索</a>
-                </div>
-            </div>
-        </div>
+.card:active{
+  transform:scale(0.92);
+}
 
-        <footer class="py-12 text-center text-slate-400 text-xs">
-            <p>已同步你的全部核心书签分类</p>
-        </footer>
-    </div>
-</body>
+.card img{
+  width:36px;
+  height:36px;
+  margin-bottom:6px;
+}
+
+.card span{
+  font-size:12px;
+  text-align:center;
+}
+
+.topbar{
+  position:sticky;
+  top:0;
+  background:var(--bg);
+  padding:10px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+  font-size:14px;
+}
+
+.section-title{
+  padding:0 15px;
+  font-size:14px;
+  margin-top:10px;
+}
+
+/* bottom dock */
+.dock{
+  position:fixed;
+  bottom:10px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:10px;
+  background:rgba(255,255,255,0.7);
+  backdrop-filter:blur(10px);
+  padding:8px 14px;
+  border-radius:20px;
+}
+
+.dock button{
+  background:none;
+  border:none;
+  font-size:18px;
+}
+
+</style></head><body><div class="topbar">
+  <input id="search" placeholder="🔍 搜索" oninput="render()">
+</div><div id="content"></div><div class="dock">
+  <button onclick="scrollTopFast()">⬆️</button>
+  <button onclick="toggleDark()">🌙</button>
+</div><script>
+let data = JSON.parse(localStorage.getItem("nav")) || [];
+let pinned = JSON.parse(localStorage.getItem("nav_pin")||"[]");
+let recent = JSON.parse(localStorage.getItem("nav_recent")||"[]");
+
+function icon(url){ try{return 'https://www.google.com/s2/favicons?domain='+new URL(url).hostname;}catch{return '';} }
+
+function addRecent(url){
+  recent=[url,...recent.filter(u=>u!==url)].slice(0,20);
+  localStorage.setItem('nav_recent',JSON.stringify(recent));
+}
+
+function openLink(url){ addRecent(url); window.open(url,'_blank'); }
+
+function render(){
+  let q=(document.getElementById('search').value||'').toLowerCase();
+  let c=document.getElementById('content');
+  c.innerHTML='';
+
+  if(pinned.length){
+    c.innerHTML+=`<div class='section-title'>⭐ 常用</div><div class='grid'>`+
+    pinned.map(u=>`<div class="card" onclick="openLink('${u}')"><img src="${icon(u)}"><span>${new URL(u).hostname}</span></div>`).join('')+
+    `</div>`;
+  }
+
+  if(recent.length){
+    c.innerHTML+=`<div class='section-title'>🕘 最近</div><div class='grid'>`+
+    recent.map(u=>`<div class="card" onclick="openLink('${u}')"><img src="${icon(u)}"><span>${new URL(u).hostname}</span></div>`).join('')+
+    `</div>`;
+  }
+
+  data.forEach(cat=>{
+    let items=cat.items.filter(i=>i.name.toLowerCase().includes(q));
+    if(!items.length) return;
+
+    c.innerHTML+=`<div class='section-title'>${cat.category}</div><div class='grid'>`+
+    items.map(i=>`<div class="card" onclick="openLink('${i.url}')"><img src="${icon(i.url)}"><span>${i.name}</span></div>`).join('')+
+    `</div>`;
+  });
+}
+
+function scrollTopFast(){ window.scrollTo({top:0,behavior:'smooth'}); }
+function toggleDark(){ document.body.classList.toggle('dark'); }
+
+render();
+</script></body>
 </html>
