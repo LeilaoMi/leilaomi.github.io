@@ -60,12 +60,50 @@ function readFile(file){
 function updateFromLast(){ if(!lastRaw)return alert('先导入'); data=parse(lastRaw); save(); render(); }
 
 function parse(html){
-  const doc=new DOMParser().parseFromString(html,'text/html');
-  let res=[];
-  doc.querySelectorAll('DT > H3').forEach(f=>{
-    let links=[];
-    let dl=f.parentElement.querySelector('DL');
-    if(dl){ dl.querySelectorAll('A').forEach(a=>links.push({name:a.innerText||a.href,url:a.href})); }
+  const doc = new DOMParser().parseFromString(html,'text/html');
+  let result = [];
+
+  // 优先按文件夹解析（常见浏览器）
+  doc.querySelectorAll('DT').forEach(dt => {
+    const h3 = dt.querySelector('h3');
+    const dl = dt.querySelector('dl');
+
+    if(h3 && dl){
+      let name = h3.innerText || '未命名';
+      let links = [];
+
+      dl.querySelectorAll('a').forEach(a => {
+        if(a.href){
+          links.push({ name: a.innerText || a.href, url: a.href });
+        }
+      });
+
+      if(links.length){
+        result.push({ category: name, items: links });
+      }
+    }
+  });
+
+  // fallback：如果没有解析出分类 → 全部读取
+  if(result.length === 0){
+    let allLinks = Array.from(doc.querySelectorAll('a'));
+
+    if(allLinks.length === 0){
+      alert('没有检测到书签，请确认文件是否正确');
+      return [];
+    }
+
+    result.push({
+      category: '📚 我的书签',
+      items: allLinks.map(a => ({
+        name: a.innerText || a.href,
+        url: a.href
+      }))
+    });
+  }
+
+  return result;
+}
     if(links.length) res.push({category:f.innerText,items:links});
   });
   return res;
