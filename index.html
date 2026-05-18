@@ -415,6 +415,37 @@ html.dark .dock{background:rgba(28,31,40,.7)}
 <script>
 'use strict';
 
+// ========== IndexedDB (用于大数据) ==========
+const DB = {
+  _p: null,
+  open(){
+    if(this._p) return this._p;
+    this._p = new Promise((res, rej) => {
+      const req = indexedDB.open('navdb', 1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+      req.onsuccess = e => res(e.target.result);
+      req.onerror = e => rej(e.target.error);
+    });
+    return this._p;
+  },
+  async _tx(mode){
+    const db = await this.open();
+    return db.transaction('kv', mode).objectStore('kv');
+  },
+  async get(k){
+    const s = await this._tx('readonly');
+    return new Promise((r) => { const q = s.get(k); q.onsuccess = ()=>r(q.result); q.onerror = ()=>r(null); });
+  },
+  async set(k, v){
+    const s = await this._tx('readwrite');
+    return new Promise((res, rej) => { const q = s.put(v, k); q.onsuccess = ()=>res(); q.onerror = e=>rej(e.target.error); });
+  },
+  async del(k){
+    const s = await this._tx('readwrite');
+    return new Promise((res) => { const q = s.delete(k); q.onsuccess = ()=>res(); q.onerror = ()=>res(); });
+  }
+};
+
 // ========== 状态 ==========
 const STATE = {
   data: [],       // [{name, links:[{name,url}]}]
@@ -427,14 +458,43 @@ const STATE = {
 };
 
 // ========== 持久化 ==========
-function load(){
-  try{ STATE.data = JSON.parse(localStorage.getItem('nav_data')||'[]'); }catch(e){ STATE.data=[]; }
+async function load(){
+  // data: IndexedDB（容量大，适合 30000+ 书签）
+  try{
+    STATE.data = (await DB.get('data')) || [];
+  }catch(e){ STATE.data = []; }
+
+  // 兼容旧 localStorage 数据 → 一次性迁移到 IndexedDB
+  if(!STATE.data.length){
+    try{
+      const legacy = localStorage.getItem('nav_data');
+      if(legacy){
+        STATE.data = JSON.parse(legacy);
+        if(STATE.data.length){
+          try{ await DB.set('data', STATE.data); }catch(e){}
+        }
+      }
+    }catch(e){}
+    // 清理旧的（无论是否成功），释放 localStorage 配额
+    try{ localStorage.removeItem('nav_data'); }catch(e){}
+    try{ localStorage.removeItem('nav_raw'); }catch(e){}
+  }
+
   try{ STATE.clicks = JSON.parse(localStorage.getItem('nav_clicks')||'{}'); }catch(e){ STATE.clicks={}; }
   STATE.theme = localStorage.getItem('nav_theme')||'auto';
   STATE.compact = localStorage.getItem('nav_compact')==='1';
 }
-function saveData(){ localStorage.setItem('nav_data', JSON.stringify(STATE.data)); }
-function saveClicks(){ localStorage.setItem('nav_clicks', JSON.stringify(STATE.clicks)); }
+
+async function saveData(){
+  try{
+    await DB.set('data', STATE.data);
+  }catch(e){
+    toast('保存失败：' + (e && e.message ? e.message : e));
+  }
+}
+function saveClicks(){
+  try{ localStorage.setItem('nav_clicks', JSON.stringify(STATE.clicks)); }catch(e){}
+}
 
 // ========== 主题 ==========
 function applyTheme(){
@@ -558,19 +618,20 @@ document.getElementById('file').addEventListener('change', e=>{
 });
 function importFile(f){
   const r = new FileReader();
-  r.onload = ()=>{
+  r.onload = async ()=>{
     try{
       const txt = r.result;
       const data = f.name.toLowerCase().endsWith('.json') ? parseJSON(txt) : parseBookmarkHTML(txt);
       if(!data.length) throw new Error('未识别到任何书签');
       STATE.data = data;
-      saveData();
-      STATE.filter = -1;  // 全部
+      await saveData();
+      STATE.filter = -1;
       STATE.q = '';
       document.getElementById('q').value = '';
       render();
-      toast(`导入成功：${data.length} 个分类`);
-    }catch(err){ toast('导入失败：'+err.message); }
+      const total = data.reduce((s,g)=>s+g.links.length, 0);
+      toast(`导入成功：${data.length} 个分类 · ${total} 个链接`);
+    }catch(err){ toast('导入失败：'+(err && err.message ? err.message : err)); }
   };
   r.readAsText(f);
 }
@@ -596,10 +657,11 @@ function exportJSON(){
   toast('已导出 JSON');
 }
 
-function clearAll(){
+async function clearAll(){
   if(!STATE.data.length){ toast('没有数据'); return; }
   if(!confirm('确定清空所有书签数据？')) return;
   STATE.data = []; STATE.clicks = {};
+  await DB.del('data');
   localStorage.removeItem('nav_data');
   localStorage.removeItem('nav_clicks');
   render();
@@ -977,11 +1039,13 @@ if('serviceWorker' in navigator){
 }
 
 // ========== 启动 ==========
-load();
-applyTheme();
-document.body.classList.toggle('compact', STATE.compact);
-tick(); setInterval(tick, 1000);
-render();
+(async () => {
+  await load();
+  applyTheme();
+  document.body.classList.toggle('compact', STATE.compact);
+  tick(); setInterval(tick, 1000);
+  render();
+})();
 </script>
 </body>
 </html>
