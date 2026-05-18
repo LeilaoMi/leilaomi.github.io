@@ -1,0 +1,14 @@
+{
+  "name": "导航站",
+  "short_name": "导航",
+  "description": "个人书签导航",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f5",
+  "theme_color": "#4a90c4",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

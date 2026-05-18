@@ -1,140 +1,530 @@
-<!DOCTYPE html><html lang="zh">
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>导航站 Pro Max（懒加载）</title><style>
-:root{ --bg:#f7f7f5; --card:#fff; --text:#1f1f1f; }
-body.dark{ --bg:#1e1e1e; --card:#2f2f2f; --text:#fff; }
-body{ margin:0; font-family:-apple-system; background:var(--bg); color:var(--text); }
-
-.grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding:15px; }
-.card{ display:flex; flex-direction:column; align-items:center; padding:10px 6px; border-radius:16px; background:var(--card); cursor:pointer; }
-.card:active{ transform:scale(0.9); }
-.card img{ width:36px; height:36px; margin-bottom:6px; }
-.card span{ font-size:12px; text-align:center; }
-
-.topbar{ position:sticky; top:0; background:var(--bg); padding:10px; }
-input{ width:100%; padding:12px; border-radius:12px; border:none; }
-.section-title{ padding:0 15px; margin-top:10px; }
-
-.dock{ position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:10px; background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); padding:8px 14px; border-radius:20px; }
-
-.upload-btn{ position:fixed; right:15px; bottom:80px; width:52px; height:52px; border-radius:50%; background:#4CAF50; color:#fff; border:none; }
-
-.loader{ text-align:center; padding:20px; font-size:12px; opacity:.6; }
-</style></head>
-<body><div class="topbar">
-  <input id="search" placeholder="🔍 搜索" oninput="resetAndRender()">
-</div><div id="content"></div>
-<div id="loader" class="loader">加载中...</div><input type="file" id="fileInput" style="display:none" accept=".html" />
-<button class="upload-btn" onclick="triggerFile()">📂</button><div class="dock">
-  <button onclick="scrollTopFast()">⬆️</button>
-  <button onclick="toggleDark()">🌙</button>
-  <button onclick="updateFromLast()">🔄</button>
-</div><script>
-let data = JSON.parse(localStorage.getItem("nav")) || [];
-let lastRaw = localStorage.getItem("nav_raw") || "";
-let recent = JSON.parse(localStorage.getItem("nav_recent")||"[]");
-let freq = JSON.parse(localStorage.getItem("nav_freq")||"{}");
-
-const BATCH = 120; // 每次加载数量
-let renderIndex = 0;
-let flatList = [];
-
-function triggerFile(){ fileInput.click(); }
-fileInput.onchange=e=>{ if(e.target.files[0]) readFile(e.target.files[0]); };
-
-function readFile(file){
-  let r=new FileReader();
-  r.onload=()=>{ lastRaw=r.result; localStorage.setItem('nav_raw',lastRaw); data=parse(lastRaw); save(); resetAndRender(); };
-  r.readAsText(file);
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4a90c4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1f1f1f" media="(prefers-color-scheme: dark)">
+<meta name="description" content="个人书签导航 · 上传浏览器导出的书签 HTML 即可使用">
+<meta property="og:title" content="导航站">
+<meta property="og:description" content="个人书签导航">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.json">
+<title>导航站</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#fff; --text:#1f1f1f; --muted:#8a8a8a;
+  --border:#e8e8e8; --accent:#4a90c4; --accent-bg:#e8f1f9;
+  --shadow: 0 1px 3px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04);
+}
+:root.dark{
+  --bg:#15171a; --card:#23262b; --text:#e8e8e8; --muted:#888;
+  --border:#2e3137; --accent:#6ab0e0; --accent-bg:#1e2a35;
+  --shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.2);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg); color:var(--text);
+  -webkit-tap-highlight-color:transparent;
 }
 
-function updateFromLast(){ if(!lastRaw)return alert('先导入'); data=parse(lastRaw); save(); resetAndRender(); }
+/* ============ 顶栏 ============ */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  padding:10px 14px 8px;
+  border-bottom:1px solid var(--border);
+}
+.search-row{display:flex; gap:8px; align-items:center}
+.search-row input{
+  flex:1; padding:11px 14px; border:none; border-radius:12px;
+  background:var(--card); color:var(--text); font-size:15px;
+  box-shadow:var(--shadow);
+}
+.search-row input:focus{outline:2px solid var(--accent); outline-offset:0}
+.search-row .btn{
+  width:42px;height:42px;border:none;border-radius:12px;
+  background:var(--card); color:var(--text); font-size:18px;
+  cursor:pointer; box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:center;
+}
+.search-row .btn:hover{background:var(--accent-bg)}
 
-function parse(html){
-  const doc=new DOMParser().parseFromString(html,'text/html');
-  let result = [];
+.tabs{
+  display:flex; gap:6px; overflow-x:auto; padding:8px 0 2px;
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:0 0 auto; padding:6px 14px; border-radius:999px;
+  background:var(--card); color:var(--text); font-size:13px;
+  border:1px solid var(--border); cursor:pointer; white-space:nowrap;
+  transition:all .15s;
+}
+.tab.active{background:var(--accent); color:#fff; border-color:var(--accent)}
+.tab .cnt{opacity:.6; font-size:11px; margin-left:4px}
 
+.stats{font-size:12px; color:var(--muted); padding:6px 14px 0; min-height:18px}
+
+/* ============ 主体 ============ */
+main{padding:6px 10px 100px; max-width:1400px; margin:0 auto}
+.section-title{
+  font-size:14px; color:var(--muted); margin:14px 6px 8px;
+  display:flex; align-items:center; gap:6px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(86px, 1fr));
+  gap:10px;
+}
+.card{
+  display:flex; flex-direction:column; align-items:center;
+  padding:12px 6px 10px; border-radius:14px;
+  background:var(--card); cursor:pointer;
+  transition:transform .12s, box-shadow .15s;
+  user-select:none; text-decoration:none; color:inherit;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+  border:1px solid transparent;
+}
+.card:hover{transform:translateY(-2px); box-shadow:var(--shadow); border-color:var(--border)}
+.card:active{transform:scale(.94)}
+.card .ico{
+  width:36px; height:36px; border-radius:10px; margin-bottom:6px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:600; color:#fff;
+  background:linear-gradient(135deg, var(--accent) 0%, #9b84e0 100%);
+  overflow:hidden;
+}
+.card .ico img{width:100%;height:100%;object-fit:cover}
+.card .name{
+  font-size:12px; line-height:1.3; text-align:center;
+  overflow:hidden; display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  word-break:break-all; min-height:31px;
+}
+
+/* ============ 空 / 引导 ============ */
+.empty{
+  text-align:center; padding:80px 20px;
+  color:var(--muted);
+}
+.empty h2{font-size:22px; margin:0 0 8px; color:var(--text)}
+.empty p{margin:6px 0; font-size:14px; line-height:1.6}
+.empty .cta{
+  display:inline-block; margin-top:18px; padding:12px 28px;
+  background:var(--accent); color:#fff; border-radius:12px;
+  cursor:pointer; font-size:15px; border:none;
+}
+.empty kbd{
+  display:inline-block; padding:2px 7px; border-radius:5px;
+  background:var(--card); border:1px solid var(--border); font-size:12px;
+}
+
+/* ============ 浮动操作 ============ */
+.dock{
+  position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+  display:flex; gap:6px;
+  background:color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  padding:6px; border-radius:16px;
+  box-shadow:0 4px 20px rgba(0,0,0,.12);
+  border:1px solid var(--border);
+  z-index:60;
+}
+.dock button{
+  width:40px; height:40px; border:none; border-radius:11px;
+  background:transparent; color:var(--text); font-size:18px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.dock button:hover{background:var(--accent-bg)}
+.dock button:active{transform:scale(.9)}
+
+/* ============ 拖放遮罩 ============ */
+.drop-mask{
+  position:fixed; inset:0; z-index:100;
+  background:rgba(74,144,196,.15); backdrop-filter:blur(8px);
+  display:none; align-items:center; justify-content:center;
+  font-size:22px; color:var(--accent); font-weight:600;
+  border:4px dashed var(--accent);
+}
+body.dragging .drop-mask{display:flex}
+
+/* ============ 提示 ============ */
+.toast{
+  position:fixed; left:50%; bottom:80px; transform:translateX(-50%);
+  background:var(--text); color:var(--bg);
+  padding:9px 18px; border-radius:10px; font-size:13px;
+  z-index:200; opacity:0; transition:opacity .2s;
+  pointer-events:none;
+}
+.toast.show{opacity:.95}
+
+@media (max-width:480px){
+  .grid{grid-template-columns:repeat(auto-fill, minmax(74px,1fr)); gap:8px}
+  .card{padding:10px 4px 8px}
+  .card .ico{width:32px;height:32px}
+  .card .name{font-size:11px; min-height:28px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="search-row">
+    <input id="q" type="search" placeholder="🔍 搜索书签..." autocomplete="off">
+    <button class="btn" id="btnImport" title="导入 (拖入文件或点这里)">📂</button>
+    <button class="btn" id="btnExport" title="导出 JSON">📤</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<main id="main"></main>
+
+<div class="dock">
+  <button id="btnTop" title="回顶">⬆️</button>
+  <button id="btnTheme" title="主题">🌙</button>
+  <button id="btnClear" title="清空数据">🗑️</button>
+</div>
+
+<input type="file" id="fileInput" accept=".html,.htm,.json" style="display:none">
+<div class="drop-mask">📂 释放以导入书签文件</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ====================== 数据层 ======================
+const LS_DATA = 'nav_data_v2';
+const LS_FREQ = 'nav_freq';
+const LS_THEME = 'nav_theme';
+const LS_ACTIVE = 'nav_active_tab';
+
+let categories = []; // [{name, items:[{name,url}]}]
+let freq = {};
+let activeTab = 'all';
+
+try { categories = JSON.parse(localStorage.getItem(LS_DATA)) || []; } catch {}
+try { freq = JSON.parse(localStorage.getItem(LS_FREQ)) || {}; } catch {}
+activeTab = localStorage.getItem(LS_ACTIVE) || 'all';
+
+function save(){ try{ localStorage.setItem(LS_DATA, JSON.stringify(categories)); }catch(e){ toast('存储已满，请减少书签或导出备份'); } }
+function saveFreq(){ try{ localStorage.setItem(LS_FREQ, JSON.stringify(freq)); }catch{} }
+
+// ====================== 主题 ======================
+function applyTheme(t){
+  const sys = matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = t === 'dark' || (t === 'auto' && sys);
+  document.documentElement.classList.toggle('dark', dark);
+  btnTheme.textContent = t === 'auto' ? '🌓' : (dark ? '☀️' : '🌙');
+}
+let theme = localStorage.getItem(LS_THEME) || 'auto';
+applyTheme(theme);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(theme==='auto') applyTheme('auto'); });
+btnTheme.onclick = () => {
+  theme = theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto';
+  localStorage.setItem(LS_THEME, theme);
+  applyTheme(theme);
+};
+
+// ====================== 解析书签 ======================
+function parseBookmarkHTML(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const cats = [];
+
+  // 标准 Netscape 格式：每个 <H3> 后跟 <DL>
   doc.querySelectorAll('DT').forEach(dt => {
-    const h3 = dt.querySelector('h3');
-    const dl = dt.querySelector('dl');
+    const h3 = dt.querySelector(':scope > H3');
+    const dl = dt.querySelector(':scope > DL');
     if(h3 && dl){
-      let links=[];
-      dl.querySelectorAll('a').forEach(a=>{
-        if(a.href) links.push({name:a.innerText||a.href,url:a.href});
+      const items = [];
+      dl.querySelectorAll(':scope > DT > A').forEach(a => {
+        if(a.href && a.href.startsWith('http')){
+          items.push({ name: (a.textContent || a.href).trim().slice(0, 80), url: a.href });
+        }
       });
-      if(links.length) result.push({category:h3.innerText,items:links});
+      if(items.length){
+        cats.push({ name: (h3.textContent || '未命名').trim().slice(0, 30), items });
+      }
     }
   });
 
-  if(result.length===0){
-    let allLinks=[...doc.querySelectorAll('a')];
-    result.push({category:'📚 我的书签',items:allLinks.map(a=>({name:a.innerText||a.href,url:a.href}))});
-  }
-
-  return result;
-}
-
-function icon(url){ try{return 'https://www.google.com/s2/favicons?domain='+new URL(url).hostname;}catch{return '';} }
-
-function openLink(url){
-  recent=[url,...recent.filter(u=>u!==url)].slice(0,20);
-  freq[url]=(freq[url]||0)+1;
-  localStorage.setItem('nav_recent',JSON.stringify(recent));
-  localStorage.setItem('nav_freq',JSON.stringify(freq));
-  window.open(url,'_blank');
-}
-
-function buildFlatList(){
-  let q=(search.value||'').toLowerCase();
-  flatList=[];
-  data.forEach(cat=>{
-    cat.items.forEach(i=>{
-      if(i.name.toLowerCase().includes(q)){
-        flatList.push(i);
+  // 兜底：直接抓所有 A 标签
+  if(cats.length === 0){
+    const items = [];
+    doc.querySelectorAll('a').forEach(a => {
+      if(a.href && a.href.startsWith('http')){
+        items.push({ name: (a.textContent || a.href).trim().slice(0, 80), url: a.href });
       }
     });
+    if(items.length) cats.push({ name: '我的书签', items });
+  }
+
+  // 同分类内去重
+  cats.forEach(c => {
+    const seen = new Set();
+    c.items = c.items.filter(i => {
+      if(seen.has(i.url)) return false;
+      seen.add(i.url); return true;
+    });
   });
-  flatList.sort((a,b)=>(freq[b.url]||0)-(freq[a.url]||0));
+
+  return cats.filter(c => c.items.length);
 }
 
-function renderBatch(){
-  let c=content;
-  let slice=flatList.slice(renderIndex, renderIndex+BATCH);
+function parseJSON(text){
+  try{
+    const d = JSON.parse(text);
+    if(Array.isArray(d) && d.every(c => c.name && Array.isArray(c.items))) return d;
+  }catch{}
+  return null;
+}
 
-  let html = `<div class='grid'>` + slice.map(i=>
-    `<div class="card" onclick="openLink('${i.url}')">
-      <img src="${icon(i.url)}"><span>${i.name}</span>
-    </div>`
-  ).join('') + `</div>`;
+async function readFile(file){
+  const text = await file.text();
+  const cats = file.name.endsWith('.json') ? (parseJSON(text) || []) : parseBookmarkHTML(text);
+  if(cats.length === 0){ toast('未识别到书签'); return; }
+  categories = cats;
+  save();
+  activeTab = 'all';
+  localStorage.setItem(LS_ACTIVE, activeTab);
+  render();
+  toast(`已导入 ${cats.length} 个分类、${cats.reduce((s,c)=>s+c.items.length,0)} 个链接`);
+}
 
-  c.insertAdjacentHTML('beforeend', html);
-  renderIndex += BATCH;
+// ====================== 渲染 ======================
+const main = document.getElementById('main');
+const tabsEl = document.getElementById('tabs');
+const statsEl = document.getElementById('stats');
+const qInput = document.getElementById('q');
 
-  if(renderIndex >= flatList.length){
-    loader.innerText = '已加载全部';
+function faviconURL(url){
+  try{
+    const h = new URL(url).hostname;
+    // DuckDuckGo 国内访问较稳定，且不依赖 Google
+    return `https://icons.duckduckgo.com/ip3/${h}.ico`;
+  }catch{ return ''; }
+}
+
+function firstLetter(name){
+  const ch = (name || '?').trim().charAt(0).toUpperCase();
+  return /[A-Z0-9]/.test(ch) ? ch : (name.trim().charAt(0) || '?');
+}
+
+function makeCard(item){
+  const a = document.createElement('a');
+  a.className = 'card';
+  a.href = item.url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  a.title = item.url;
+
+  const ico = document.createElement('div');
+  ico.className = 'ico';
+  ico.textContent = firstLetter(item.name); // fallback
+
+  const img = new Image();
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.src = faviconURL(item.url);
+  img.onload = () => { ico.textContent = ''; ico.appendChild(img); };
+  img.onerror = () => {}; // 保留首字母
+
+  const name = document.createElement('div');
+  name.className = 'name';
+  name.textContent = item.name; // textContent 防 XSS
+
+  a.append(ico, name);
+  a.addEventListener('click', () => {
+    freq[item.url] = (freq[item.url] || 0) + 1;
+    saveFreq();
+  });
+  return a;
+}
+
+function makeSection(title, items){
+  const t = document.createElement('div');
+  t.className = 'section-title';
+  t.textContent = `${title} · ${items.length}`;
+  const g = document.createElement('div');
+  g.className = 'grid';
+  items.forEach(it => g.appendChild(makeCard(it)));
+  return [t, g];
+}
+
+function getFiltered(){
+  const q = qInput.value.trim().toLowerCase();
+  if(!q) return null;
+  return categories.map(c => ({
+    name: c.name,
+    items: c.items.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      i.url.toLowerCase().includes(q)
+    )
+  })).filter(c => c.items.length);
+}
+
+function render(){
+  // 空状态
+  if(categories.length === 0){
+    main.innerHTML = '';
+    tabsEl.innerHTML = '';
+    statsEl.textContent = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.innerHTML = `
+      <h2>👋 欢迎使用导航站</h2>
+      <p>从浏览器导出书签 (Chrome/Edge: 收藏夹管理器 → 导出)</p>
+      <p>然后 <kbd>拖入</kbd> 文件到本页，或点下方按钮选择</p>
+      <button class="cta">📂 选择书签文件</button>
+    `;
+    empty.querySelector('.cta').onclick = () => fileInput.click();
+    main.appendChild(empty);
+    return;
+  }
+
+  // 渲染分类标签
+  const filtered = getFiltered();
+  const list = filtered || categories;
+  const total = list.reduce((s,c) => s + c.items.length, 0);
+  statsEl.textContent = filtered
+    ? `搜索结果: ${total} 个 · ${list.length} 个分类`
+    : `共 ${categories.length} 个分类、${categories.reduce((s,c)=>s+c.items.length,0)} 个链接`;
+
+  // tabs
+  tabsEl.innerHTML = '';
+  const allTab = document.createElement('button');
+  allTab.className = 'tab' + (activeTab === 'all' ? ' active' : '');
+  allTab.innerHTML = `全部 <span class="cnt">${total}</span>`;
+  allTab.onclick = () => { activeTab = 'all'; localStorage.setItem(LS_ACTIVE, 'all'); render(); window.scrollTo(0,0); };
+  tabsEl.appendChild(allTab);
+  list.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (activeTab === c.name ? ' active' : '');
+    const nameSpan = document.createElement('span'); nameSpan.textContent = c.name;
+    const cnt = document.createElement('span'); cnt.className = 'cnt'; cnt.textContent = c.items.length;
+    b.append(nameSpan, ' ', cnt);
+    b.onclick = () => { activeTab = c.name; localStorage.setItem(LS_ACTIVE, c.name); render(); window.scrollTo(0,0); };
+    tabsEl.appendChild(b);
+  });
+
+  // 主体
+  main.innerHTML = '';
+
+  // 当 "全部" + 无搜索 时，显示 "常用"
+  if(activeTab === 'all' && !filtered){
+    const allItems = categories.flatMap(c => c.items);
+    const topFreq = allItems
+      .filter(i => freq[i.url])
+      .sort((a,b) => (freq[b.url]||0) - (freq[a.url]||0))
+      .slice(0, 12);
+    if(topFreq.length){
+      const [t, g] = makeSection('⭐ 常用', topFreq);
+      main.append(t, g);
+    }
+  }
+
+  // 渲染分类
+  const showCats = activeTab === 'all' ? list : list.filter(c => c.name === activeTab);
+  showCats.forEach(c => {
+    if(c.items.length === 0) return;
+    const [t, g] = makeSection(c.name, c.items);
+    main.append(t, g);
+  });
+
+  if(showCats.length === 0 || showCats.every(c => c.items.length === 0)){
+    const m = document.createElement('div');
+    m.className = 'empty';
+    m.innerHTML = '<p>没有匹配的书签</p>';
+    main.appendChild(m);
   }
 }
 
-function resetAndRender(){
-  content.innerHTML='';
-  renderIndex=0;
-  buildFlatList();
-  renderBatch();
-}
+// ====================== 事件 ======================
+// 搜索防抖
+let qTimer = null;
+qInput.addEventListener('input', () => {
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => render(), 180);
+});
 
-// 滚动触发加载
-window.addEventListener('scroll', ()=>{
-  if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 200){
-    renderBatch();
+// 文件导入
+const fileInput = document.getElementById('fileInput');
+document.getElementById('btnImport').onclick = () => fileInput.click();
+fileInput.onchange = e => { const f = e.target.files[0]; if(f) readFile(f); e.target.value = ''; };
+
+// 导出
+document.getElementById('btnExport').onclick = () => {
+  if(categories.length === 0){ toast('暂无数据可导出'); return; }
+  const blob = new Blob([JSON.stringify(categories, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bookmarks-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已导出 JSON');
+};
+
+// 清空
+document.getElementById('btnClear').onclick = () => {
+  if(!confirm('确定要清空所有数据吗？此操作不可撤销')) return;
+  categories = []; freq = {};
+  localStorage.removeItem(LS_DATA);
+  localStorage.removeItem(LS_FREQ);
+  render();
+};
+
+// 回顶
+document.getElementById('btnTop').onclick = () => window.scrollTo({top:0, behavior:'smooth'});
+
+// 拖放导入
+;['dragenter','dragover'].forEach(ev => {
+  document.addEventListener(ev, e => { e.preventDefault(); document.body.classList.add('dragging'); });
+});
+;['dragleave','drop'].forEach(ev => {
+  document.addEventListener(ev, e => {
+    e.preventDefault();
+    if(ev === 'dragleave' && e.relatedTarget) return;
+    document.body.classList.remove('dragging');
+  });
+});
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  document.body.classList.remove('dragging');
+  const f = e.dataTransfer?.files?.[0];
+  if(f) readFile(f);
+});
+
+// 键盘快捷键
+document.addEventListener('keydown', e => {
+  if((e.key === '/' || e.key === 's') && document.activeElement !== qInput){
+    e.preventDefault(); qInput.focus(); qInput.select();
+  }
+  if(e.key === 'Escape' && document.activeElement === qInput){
+    qInput.value = ''; render(); qInput.blur();
   }
 });
 
-function scrollTopFast(){ window.scrollTo({top:0,behavior:'smooth'}); }
-function toggleDark(){ document.body.classList.toggle('dark'); }
-function save(){ localStorage.setItem('nav',JSON.stringify(data)); }
+// 提示
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
 
-resetAndRender();
-</script></body>
+// PWA
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+// 首次渲染
+render();
+</script>
+</body>
 </html>
